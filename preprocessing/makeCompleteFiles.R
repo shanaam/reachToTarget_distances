@@ -23,7 +23,7 @@ library(tidyverse)
 
 ## make into a function
 # setup
-path <- "data"
+path <- "data/raw"
 
 expVersion <- "reachToTarget_distance_20_EI"
 

@@ -261,38 +261,38 @@ p
 
 
 
-### do once. (done, must replace ppt 2)
-
-EIfile_instr <- fread(paste("data/complete", "reachToTarget_distance_20_EI", "2", "S001", "trial_results_theta.csv", sep = '/'),
-                        stringsAsFactors = FALSE)
-EIfile_instr <- EIfile_instr$instruction
-
-IEfile_instr <- EIfile_instr %>%
-  recode(E = "I", I = "E")
-
-
-for (ppt in list.files(path = paste(path, "reachToTarget_distance_15", sep = '/'))){
-  for (session in list.files(path = paste(path, "reachToTarget_distance_15", ppt, sep = '/'))){
-    
-    fileToLoad <- paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/')
-    
-    # read the file
-    trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
-    
-    # add instruction
-    if (as.numeric(ppt) %% 2 == 0){
-      # this is EI
-      trialDF_theta$instruction <- EIfile_instr
-    }
-    else {
-      # this is IE
-      trialDF_theta$instruction <- IEfile_instr
-    }
-    
-    # save and overwrite
-    fwrite(trialDF_theta, file = paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/'))
-  }
-}
+# ### do once. (done, must replace ppt 2)
+# 
+# EIfile_instr <- fread(paste("data/complete", "reachToTarget_distance_20_EI", "2", "S001", "trial_results_theta.csv", sep = '/'),
+#                         stringsAsFactors = FALSE)
+# EIfile_instr <- EIfile_instr$instruction
+# 
+# IEfile_instr <- EIfile_instr %>%
+#   recode(E = "I", I = "E")
+# 
+# 
+# for (ppt in list.files(path = paste(path, "reachToTarget_distance_15", sep = '/'))){
+#   for (session in list.files(path = paste(path, "reachToTarget_distance_15", ppt, sep = '/'))){
+#     
+#     fileToLoad <- paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/')
+#     
+#     # read the file
+#     trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
+#     
+#     # add instruction
+#     if (as.numeric(ppt) %% 2 == 0){
+#       # this is EI
+#       trialDF_theta$instruction <- EIfile_instr
+#     }
+#     else {
+#       # this is IE
+#       trialDF_theta$instruction <- IEfile_instr
+#     }
+#     
+#     # save and overwrite
+#     fwrite(trialDF_theta, file = paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/'))
+#   }
+# }
 
 
 
