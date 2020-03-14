@@ -110,104 +110,135 @@ applyAngDev <- function(trialDFRow, pptAllReaches){
 }
 
 
+## make the trialresultThetas
+##----
+makeTrialResultsTheta <- function(){
 
-
-# testing
-
-# trialDF$theta <- apply(trialDF, MARGIN = 1, applyAngDev, pptAllReaches = allReaches)
-
-
-# do
-
-for (expVersion in list.files(path = path)){
-  
-  for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
-    # print(ppt)
+  for (expVersion in list.files(path = path)){
     
-    for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
+    for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
+      # print(ppt)
       
-      for(trackerTag in c("trackerholder")){
+      for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
         
-        # make a vector of filenames to load (these are entire paths)       
-        fileToLoad <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
-                                 pattern = glob2rx(paste("*",trackerTag,"*", sep = "")), 
-                                 full.names = TRUE)
-        
-        # read the file
-        allReaches <- fread(fileToLoad, stringsAsFactors = FALSE)
-        
-        trialDF <- fread(paste(path, expVersion, ppt, session, "trial_results.csv", sep = '/'))
-        
-        trialDF <- trialDF %>%
-          filter(type != "instruction", type != "localization", block_num >= 4)
+        for(trackerTag in c("trackerholder")){
           
-        
-        # add an angular dev column to trialDF
-        trialDF$theta <- apply(trialDF, MARGIN = 1, applyAngDev, pptAllReaches = allReaches)
-        
-        # some basic outlier removal
-        trialDF$theta[trialDF$theta >= 90 | trialDF$theta <= -90] <- NA
-        
-        # some very basic baseline correction
-        trialDF$theta <- trialDF$theta - mean(trialDF$theta[41:104], na.rm = TRUE)
-        
-        fwrite(trialDF, file = paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/'))
+          # make a vector of filenames to load (these are entire paths)       
+          fileToLoad <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
+                                   pattern = glob2rx(paste("*",trackerTag,"*", sep = "")), 
+                                   full.names = TRUE)
+          
+          # read the file
+          allReaches <- fread(fileToLoad, stringsAsFactors = FALSE)
+          
+          trialDF <- fread(paste(path, expVersion, ppt, session, "trial_results.csv", sep = '/'))
+          
+          trialDF <- trialDF %>%
+            filter(type != "instruction", type != "localization", block_num >= 4)
+            
+          
+          # add an angular dev column to trialDF
+          trialDF$theta <- apply(trialDF, MARGIN = 1, applyAngDev, pptAllReaches = allReaches)
+          
+          # some basic outlier removal
+          trialDF$theta[trialDF$theta >= 90 | trialDF$theta <= -90] <- NA
+          
+          # some very basic baseline correction
+          trialDF$theta <- trialDF$theta - mean(trialDF$theta[41:104], na.rm = TRUE)
+          
+          fwrite(trialDF, file = paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/'))
+        }
       }
+    }
+  }
+  
+  ### do once. (done, must replace ppt 2)
+  
+  EIfile_instr <- fread(paste("data/complete", "reachToTarget_distance_20_EI", "2", "S001", "trial_results_theta.csv", sep = '/'),
+                          stringsAsFactors = FALSE)
+  EIfile_instr <- EIfile_instr$instruction
+  
+  IEfile_instr <- EIfile_instr %>%
+    recode(E = "I", I = "E")
+  
+  
+  for (ppt in list.files(path = paste(path, "reachToTarget_distance_15", sep = '/'))){
+    for (session in list.files(path = paste(path, "reachToTarget_distance_15", ppt, sep = '/'))){
+  
+      fileToLoad <- paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/')
+  
+      # read the file
+      trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
+  
+      # add instruction
+      if (as.numeric(ppt) %% 2 == 0){
+        # this is EI
+        trialDF_theta$instruction <- EIfile_instr
+      }
+      else {
+        # this is IE
+        trialDF_theta$instruction <- IEfile_instr
+      }
+  
+      # save and overwrite
+      fwrite(trialDF_theta, file = paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/'))
     }
   }
 }
 
-##merge into one file (this is by columns)
+## make a combined file (each ppt is one column)
 ##---- 
 
-# allReachDF_reach <- trialDF[ 1:332 , c("trial_num", "block_num", "cursor_rotation", "type", "target_distance")]
-# 
-# for (expVersion in list.files(path = path)){
-#   
-#   for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
-#     
-#     for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
-#       fileToLoad <- paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/')
-#       
-#       # read the file
-#       trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
-#       
-#       # trialDF_theta <- trialDF_theta %>%
-#       #   filter(block_num <= 4)
-#       
-#       
-#       allReachDF_reach <- cbind(allReachDF_reach, ppt = trialDF_theta$theta)
-#     }
-#   }
-# }
-# 
-# fwrite(allReachDF_reach, file = paste(path, "all_reaches.csv", sep = '/'))
-
+makeColumnDF <- function(){
+  allReachDF_reach <- trialDF[ 1:332 , c("trial_num", "block_num", "cursor_rotation", "type", "target_distance")]
+  
+  for (expVersion in list.files(path = path)){
+  
+    for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
+  
+      for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
+        fileToLoad <- paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/')
+  
+        # read the file
+        trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
+  
+        # trialDF_theta <- trialDF_theta %>%
+        #   filter(block_num <= 4)
+  
+  
+        allReachDF_reach <- cbind(allReachDF_reach, ppt = trialDF_theta$theta)
+      }
+    }
+  }
+  
+  fwrite(allReachDF_reach, file = paste(path, "all_reaches.csv", sep = '/'))
+}
 
 ## merge into one file (1 row per observation)
 ##----
 
-
-for (expVersion in list.dirs(path = path, recursive = FALSE)){
-  
+makeOmnibus <- function(){
   allReachList <- list()
   i <- 1
   
-  for (ppt in list.dirs(path = expVersion, recursive = FALSE)){
+  for (expVersion in list.dirs(path = path, recursive = FALSE)){
     
-    for (session in list.dirs(path = ppt, recursive = FALSE)){
-      fileToLoad <- paste(session, "trial_results_theta.csv", sep = '/')
+    for (ppt in list.dirs(path = expVersion, recursive = FALSE)){
       
-      # read the file
-      trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
-      
-      # remove instruction trials
-      trialDF_theta <- trialDF_theta %>%
-        filter(type != "instruction")
-      
-      allReachList[[i]] <- trialDF_theta
-      
-      i <- i + 1
+      for (session in list.dirs(path = ppt, recursive = FALSE)){
+        fileToLoad <- paste(session, "trial_results_theta.csv", sep = '/')
+        
+        # read the file
+        trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
+        
+        # remove instruction trials
+        trialDF_theta <- trialDF_theta %>%
+          filter(type != "instruction")
+        
+        allReachList[[i]] <- trialDF_theta
+        
+        i <- i + 1
+      }
     }
   }
   
@@ -227,72 +258,44 @@ for (expVersion in list.dirs(path = path, recursive = FALSE)){
            -directory,
            -hand)
   
-  fwrite(complete_df, file = paste(path, "all_reaches.csv", sep = '/'))
-  
+  fwrite(complete_df, file = paste("data/omnibus", "all_reaches.csv", sep = '/'))
 }
 
 
-
-
-## test plots
-trial <- 220
-relevantReach <-
-  allReaches %>%
-  filter(time >= as.numeric(trialDF$start_time[trial]), 
-         time <= as.numeric(trialDF$end_time[trial]))
-
-library(plotly)
-
-p <- plot_ly(x = relevantReach$pos_x, y = relevantReach$pos_z, z = relevantReach$pos_y, type = "scatter3d") %>%
-  layout(
-    title = "reach to target",
-    autosize = FALSE)
-
-p
+## do
+makeTrialResultsTheta()
+makeOmnibus()
 
 
 
-
-
-
-
-
-
-
-
-
-# ### do once. (done, must replace ppt 2)
+# ## test plots
+# trial <- 220
+# relevantReach <-
+#   allReaches %>%
+#   filter(time >= as.numeric(trialDF$start_time[trial]), 
+#          time <= as.numeric(trialDF$end_time[trial]))
 # 
-# EIfile_instr <- fread(paste("data/complete", "reachToTarget_distance_20_EI", "2", "S001", "trial_results_theta.csv", sep = '/'),
-#                         stringsAsFactors = FALSE)
-# EIfile_instr <- EIfile_instr$instruction
+# library(plotly)
 # 
-# IEfile_instr <- EIfile_instr %>%
-#   recode(E = "I", I = "E")
+# p <- plot_ly(x = relevantReach$pos_x, y = relevantReach$pos_z, z = relevantReach$pos_y, type = "scatter3d") %>%
+#   layout(
+#     title = "reach to target",
+#     autosize = FALSE)
 # 
-# 
-# for (ppt in list.files(path = paste(path, "reachToTarget_distance_15", sep = '/'))){
-#   for (session in list.files(path = paste(path, "reachToTarget_distance_15", ppt, sep = '/'))){
-#     
-#     fileToLoad <- paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/')
-#     
-#     # read the file
-#     trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
-#     
-#     # add instruction
-#     if (as.numeric(ppt) %% 2 == 0){
-#       # this is EI
-#       trialDF_theta$instruction <- EIfile_instr
-#     }
-#     else {
-#       # this is IE
-#       trialDF_theta$instruction <- IEfile_instr
-#     }
-#     
-#     # save and overwrite
-#     fwrite(trialDF_theta, file = paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/'))
-#   }
-# }
+# p
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

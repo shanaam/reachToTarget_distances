@@ -25,53 +25,57 @@ library(tidyverse)
 # setup
 path <- "data/raw"
 
-expVersion <- "reachToTarget_distance_20_EI"
+expVersions <- c("reachToTarget_distance_20_EI", "reachToTarget_distance_20_IE")
 
-dir.create(paste(path, "complete", sep = "/"))
-dir.create(paste(path, "complete", expVersion, sep = "/"))
+dir.create(paste("data", "complete", sep = "/"))
 
-for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
-  
-  dir.create(paste(path, "complete", expVersion, ppt, sep = '/'))
-  
-  for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
-    dir.create(paste(path, "complete", expVersion, ppt, session, sep = '/'))
+for(expVersion in expVersions){
     
-    for(trackerTag in c("cursorobjecttracker", "trackerholderobject")){
+  dir.create(paste("data", "complete", expVersion, sep = "/"))
+  
+  for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
+    
+    dir.create(paste("data", "complete", expVersion, ppt, sep = '/'))
+    
+    for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
+      dir.create(paste("data", "complete", expVersion, ppt, session, sep = '/'))
       
-      # make a vector of filenames to load (these are entire paths)       
-      filesToLoad <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
-                                pattern = glob2rx(paste("*",trackerTag,"*", sep = "")), 
-                                full.names = TRUE)
-      
-      datalist <- list()
-      i <- 1
-      
-      # fill up datalist
-      for (eachFilePath in filesToLoad){
-        eachFile <- fread(eachFilePath, stringsAsFactors = FALSE)
+      for(trackerTag in c("cursorobjecttracker", "trackerholderobject")){
         
-        # save this one df to datalist
-        datalist[[i]] <- eachFile
+        # make a vector of filenames to load (these are entire paths)       
+        filesToLoad <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
+                                  pattern = glob2rx(paste("*",trackerTag,"*", sep = "")), 
+                                  full.names = TRUE)
         
-        i <- i+1
+        datalist <- list()
+        i <- 1
+        
+        # fill up datalist
+        for (eachFilePath in filesToLoad){
+          eachFile <- fread(eachFilePath, stringsAsFactors = FALSE)
+          
+          # save this one df to datalist
+          datalist[[i]] <- eachFile
+          
+          i <- i+1
+        }
+        
+        # save this
+        complete_df <- do.call(rbind, datalist)
+        
+        fileName <- paste(trackerTag, "_complete.csv", sep = "")
+        
+        # print(head(complete_df))
+        fwrite(complete_df, file = paste("data", "complete", expVersion, ppt, session, fileName, sep = '/'))
       }
       
-      # save this
-      complete_df <- do.call(rbind, datalist)
+      #copy over the trial results file
+      trialResultPath <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
+                                    pattern = glob2rx("*_results*"), 
+                                    full.names = TRUE) 
+      trialResult <- fread(trialResultPath, stringsAsFactors = FALSE)
       
-      fileName <- paste(trackerTag, "_complete.csv", sep = "")
-      
-      # print(head(complete_df))
-      fwrite(complete_df, file = paste(path, "complete", expVersion, ppt, session, fileName, sep = '/'))
+      fwrite(trialResult, file = paste("data", "complete", expVersion, ppt, session, "trial_results.csv", sep = '/'))
     }
-    
-    #copy over the trial results file
-    trialResultPath <- list.files(path = paste(path, expVersion, ppt, session, sep = '/'), 
-                                  pattern = glob2rx("*_results*"), 
-                                  full.names = TRUE) 
-    trialResult <- fread(trialResultPath, stringsAsFactors = FALSE)
-    
-    fwrite(trialResult, file = paste(path, "complete", expVersion, ppt, session, "trial_results.csv", sep = '/'))
   }
 }
