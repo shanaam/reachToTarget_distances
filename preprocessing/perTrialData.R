@@ -143,9 +143,6 @@ makeTrialResultsTheta <- function(){
           # some basic outlier removal
           trialDF$theta[trialDF$theta >= 90 | trialDF$theta <= -90] <- NA
           
-          # some very basic baseline correction
-          trialDF$theta <- trialDF$theta - mean(trialDF$theta[41:104], na.rm = TRUE)
-          
           fwrite(trialDF, file = paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/'))
         }
       }
@@ -184,34 +181,6 @@ makeTrialResultsTheta <- function(){
       fwrite(trialDF_theta, file = paste(path, "reachToTarget_distance_15", ppt, session, "trial_results_theta.csv", sep = '/'))
     }
   }
-}
-
-## make a combined file (each ppt is one column)
-##---- 
-
-makeColumnDF <- function(){
-  allReachDF_reach <- trialDF[ 1:332 , c("trial_num", "block_num", "cursor_rotation", "type", "target_distance")]
-  
-  for (expVersion in list.files(path = path)){
-  
-    for (ppt in list.files(path = paste(path, expVersion, sep = '/'))){
-  
-      for (session in list.files(path = paste(path, expVersion, ppt, sep = '/'))){
-        fileToLoad <- paste(path, expVersion, ppt, session, "trial_results_theta.csv", sep = '/')
-  
-        # read the file
-        trialDF_theta <- fread(fileToLoad, stringsAsFactors = FALSE)
-  
-        # trialDF_theta <- trialDF_theta %>%
-        #   filter(block_num <= 4)
-  
-  
-        allReachDF_reach <- cbind(allReachDF_reach, ppt = trialDF_theta$theta)
-      }
-    }
-  }
-  
-  fwrite(allReachDF_reach, file = paste(path, "all_reaches.csv", sep = '/'))
 }
 
 ## merge into one file (1 row per observation)
@@ -262,10 +231,62 @@ makeOmnibus <- function(){
 }
 
 
+## Make localization file
+makeLocalizationOmnibus <- function(){
+  
+  allReachList <- list()
+  i <- 1
+  
+  for (expVersion in list.dirs(path = path, recursive = FALSE)){
+    
+    for (ppt in list.dirs(path = expVersion, recursive = FALSE)){
+      
+      for (session in list.dirs(path = ppt, recursive = FALSE)){
+        
+        # make a vector of filenames to load (these are entire paths)       
+        fileToLoad <- list.files(path = session, 
+                                 pattern = glob2rx(paste("*", "trial_results.csv","*", sep = "")), 
+                                 full.names = TRUE)
+        
+        trialDF <- fread(fileToLoad)
+        
+        # remove unused columns
+        trialDF <- trialDF %>%
+          select(experiment,
+                 ppid,
+                 ends_with("num"),
+                 trial_num_in_block,
+                 ends_with("time"),
+                 targetAngle,
+                 type,
+                 target_distance,
+                 starts_with("home_"),
+                 starts_with("target_"),
+                 starts_with("loc_"),
+                 -target_vertPos,
+                 -session_num)
+        
+        trialDF <- trialDF %>%
+          filter(type == "localization", block_num >= 4)
+        
+        allReachList[[i]] <- trialDF
+        
+        i <- i + 1
+
+      }
+    }
+  }
+  
+  complete_df <- do.call(rbind, allReachList)
+  
+  fwrite(complete_df, file = paste("data/omnibus", "all_locs.csv", sep = '/'))
+  
+}
+
 ## do
 makeTrialResultsTheta()
 makeOmnibus()
-
+makeLocalizationOmnibus()
 
 
 # ## test plots

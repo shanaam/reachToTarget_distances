@@ -45,6 +45,28 @@ applY_uqID <- function(row){
   paste(row[1], row[2], sep = "_")
 }
 
+apply_dummy <- function(rot_data_row){
+  ## Input: ppid, trial_num, type, instruction
+  if(rot_data_row[3] == "rotated" | rot_data_row[3] == "aligned" ){
+    if(as.numeric(rot_data_row[2]) >= 149 & as.numeric(rot_data_row[2]) <= 152)
+      return(as.factor(1))
+    else if(as.numeric(rot_data_row[2]) >= 153 & as.numeric(rot_data_row[2]) <= 156)
+      return(as.factor(2))
+    else if(as.numeric(rot_data_row[2]) >= 245 & as.numeric(rot_data_row[2]) <= 248)
+      return(as.factor(3))
+    else 
+      return(as.factor("N"))
+  }
+  else {
+    if(rot_data_row[4] == "E")
+      return(as.factor("E"))
+    else if(rot_data_row[4] == "I")
+      return(as.factor("I"))
+    else
+      return(as.factor("X"))
+  }
+}
+
 # do
 omnibus_path <- "data/omnibus/all_reaches.csv"
 
@@ -72,9 +94,32 @@ rot_data <-
   rename(theta = temp)
 
 # SAVE HERE
-fwrite(rot_data, file = paste("data/wide_format", "rot_data_bl_corrected.csv", sep = '/'))
+# fwrite(rot_data, file = paste("data/wide_format", "rot_data_bl_corrected.csv", sep = '/'))
 
 
+## Make JASPable
+# Add dummies for JASP
+rot_data$dummy <- rot_data %>%
+  select(ppid, trial_num, type, instruction) %>%
+  apply(1, FUN = apply_dummy)
+
+rot_data_JASP <- rot_data %>%
+  group_by(target_distance, ppid, dummy) %>%
+  summarise(mean_dev = mean(theta, na.rm = TRUE), 
+            sd = sd(theta, na.rm = TRUE), 
+            ci = vector_confint(theta), 
+            n = n(), 
+            median_dev = median(theta, na.rm = TRUE)) 
+
+rot_data_JASP <- rot_data_JASP %>%
+  select(target_distance, ppid, dummy, mean_dev) %>%
+  pivot_wider(names_from = dummy, values_from = mean_dev) %>%
+  select(-N)
+
+# fwrite(rot_data_JASP, file = paste("data/wide_format", "blocked_JASP.csv", sep = '/'))
+
+
+## Make Excel-able
 # make column data (pivot)
 
 rot_data$uqID <- select(rot_data, ppid, target_distance) %>%
@@ -86,7 +131,7 @@ rot_data_wide_reaches <- rot_data %>%
   pivot_wider(names_from = uqID, values_from = theta)
 
 # SAVE HERE
-fwrite(rot_data_wide_reaches, file = paste("data/wide_format", "reaches.csv", sep = '/'))
+# fwrite(rot_data_wide_reaches, file = paste("data/wide_format", "reaches.csv", sep = '/'))
 
 # do the same for instructed, and non-instructed data
 rot_data_wide_nocur <- rot_data %>%
@@ -94,4 +139,4 @@ rot_data_wide_nocur <- rot_data %>%
   filter(type == "nocursor") %>%
   pivot_wider(names_from = uqID, values_from = theta)
 
-fwrite(rot_data_wide_nocur, file = paste("data/wide_format", "no_cursors.csv", sep = '/'))
+# fwrite(rot_data_wide_nocur, file = paste("data/wide_format", "no_cursors.csv", sep = '/'))
